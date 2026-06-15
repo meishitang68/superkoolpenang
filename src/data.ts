@@ -77,7 +77,7 @@ export const POPULAR_BRANDS = [
 export const MAINSTREAM_TECHNICIANS = [
   { name: "Anwar", rating: 4.9, completed: 342, specialties: ["Wall-mounted", "Daikin Expert", "Chemical Overhauls"] },
   { name: "Muthu", rating: 4.85, completed: 298, specialties: ["Cassette units", "Leakage Specialist", "York Expert"] },
-  { name: "Ah Hock (Uncle Hock)", rating: 5.0, completed: 852, specialties: ["Troubleshooting Master", "Panasonic Inverters", "All-round Guru"] },
+  { name: "Mike", rating: 5.0, completed: 852, specialties: ["Troubleshooting Master", "Panasonic Inverters", "All-round Guru"] },
 ];
 
 // Calculate live price based on selections

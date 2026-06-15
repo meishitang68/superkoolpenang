@@ -1,18 +1,22 @@
 import React, { useState, useEffect } from "react";
 import { 
   Wrench, User, Calendar, CheckSquare, ChevronRight, ChevronLeft, 
-  Settings, Percent, DollarSign, Building, Phone, Mail, MapPin, Sparkles
+  Settings, Percent, DollarSign, Building, Phone, Mail, MapPin, Sparkles, MessageSquare
 } from "lucide-react";
 import { PenangArea, ServiceType, AcType, AcHorsepower, Appointment } from "../types";
 import { PENANG_AREAS, SERVICE_TYPES, POPULAR_BRANDS, calculateEstimatedPrice } from "../data";
+import { TRANSLATIONS, Language } from "../translations";
 
 interface BookingFormProps {
   userId: string;
   onSubmit: (formData: any) => void;
   onCancel: () => void;
+  lang?: Language;
+  prefillData?: Partial<Appointment> | null;
 }
 
-export default function BookingForm({ userId, onSubmit, onCancel }: BookingFormProps) {
+export default function BookingForm({ userId, onSubmit, onCancel, lang = "en", prefillData }: BookingFormProps) {
+  const t = TRANSLATIONS[lang];
   const [step, setStep] = useState(1);
   const [serviceType, setServiceType] = useState<ServiceType>("normal_cleaning");
   const [unitsCount, setUnitsCount] = useState<number>(1);
@@ -34,9 +38,26 @@ export default function BookingForm({ userId, onSubmit, onCancel }: BookingFormP
 
   // Estimation state
   const [estimatedPrice, setEstimatedPrice] = useState(0);
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
 
   // Set min date to today's date for Penang residential appointment scheduling
   const [minDateString, setMinDateString] = useState("");
+
+  // Trigger prefill when loaded or changed
+  useEffect(() => {
+    if (prefillData) {
+      if (prefillData.serviceType) setServiceType(prefillData.serviceType);
+      if (prefillData.unitsCount) setUnitsCount(prefillData.unitsCount);
+      if (prefillData.acType) setAcType(prefillData.acType);
+      if (prefillData.acBrand) setAcBrand(prefillData.acBrand);
+      if (prefillData.acHorsepower) setAcHorsepower(prefillData.acHorsepower);
+      if (prefillData.clientName) setClientName(prefillData.clientName);
+      if (prefillData.clientPhone) setClientPhone(prefillData.clientPhone);
+      if (prefillData.clientEmail) setClientEmail(prefillData.clientEmail);
+      if (prefillData.clientArea) setClientArea(prefillData.clientArea);
+      if (prefillData.clientAddress) setClientAddress(prefillData.clientAddress);
+    }
+  }, [prefillData]);
 
   useEffect(() => {
     const today = new Date();
@@ -79,6 +100,32 @@ export default function BookingForm({ userId, onSubmit, onCancel }: BookingFormP
     setStep((p) => p - 1);
   };
 
+  const getWhatsAppUrl = () => {
+    const serviceTitle = currentServiceInfo?.title || serviceType;
+    const slotName = serviceTimeSlot === "morning"
+      ? "Morning (09:00 AM - 12:00 PM)"
+      : serviceTimeSlot === "afternoon"
+      ? "Afternoon (01:00 PM - 04:00 PM)"
+      : "Late Afternoon (04:00 PM - 07:00 PM)";
+    
+    const text = `*NEW BOOKING DETAILS - SUPERCOOL PENANG* ❄️\n\n` +
+      `👤 *Customer Name:* ${clientName}\n` +
+      `📞 *Phone Number:* ${clientPhone}\n` +
+      `✉️ *Email:* ${clientEmail}\n` +
+      `🛠️ *Service Type:* ${serviceTitle}\n` +
+      `🔢 *Units:* ${unitsCount} Unit(s)\n` +
+      `🏷️ *Brand & Model:* ${acBrand} (${acType === "wall_mounted" ? "Wall Mounted" : acType === "cassette" ? "Cassette" : "Ceiling Exposed"} / ${acHorsepower})\n` +
+      `📅 *Appointment Date:* ${serviceDate}\n` +
+      `🕒 *Time Slot:* ${slotName}\n` +
+      `📍 *Penang Region:* ${clientArea}\n` +
+      `🏠 *Servicing Address:* ${clientAddress}\n` +
+      (userNotes ? `📝 *Additional Notes:* ${userNotes}\n` : "") +
+      `💰 *Guaranteed Price Estimate:* RM ${estimatedPrice}.00\n\n` +
+      `Please confirm our appointment on your system! Thank you!`;
+
+    return `https://wa.me/60175162938?text=${encodeURIComponent(text)}`;
+  };
+
   const handleFormSubmission = (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateStep()) return;
@@ -100,6 +147,15 @@ export default function BookingForm({ userId, onSubmit, onCancel }: BookingFormP
       estimatePrice: estimatedPrice,
     };
     onSubmit(newBooking);
+    setIsSuccessModalOpen(true);
+
+    // Redirect to WhatsApp with finalized details
+    const url = getWhatsAppUrl();
+    try {
+      window.open(url, "_blank");
+    } catch (e_err) {
+      console.warn("Popup blocked inside sandboxed iframe", e_err);
+    }
   };
 
   const currentServiceInfo = SERVICE_TYPES[serviceType];
@@ -110,10 +166,10 @@ export default function BookingForm({ userId, onSubmit, onCancel }: BookingFormP
       <div className="bg-slate-50 border-b border-slate-100 p-4">
         <div className="flex items-center justify-between max-w-md mx-auto">
           {[
-            { num: 1, label: "Services", desc: "Select options" },
-            { num: 2, label: "Location", desc: "Penang Area" },
-            { num: 3, label: "Schedule", desc: "Select time" },
-            { num: 4, label: "Review", desc: "Final check" },
+            { num: 1, label: lang === "zh" ? "服务选择" : lang === "ms" ? "Pilih Servis" : "Services", desc: lang === "zh" ? "配置" : lang === "ms" ? "Pilihan" : "Select options" },
+            { num: 2, label: lang === "zh" ? "服务地址" : lang === "ms" ? "Kawasan" : "Location", desc: lang === "zh" ? "区域" : lang === "ms" ? "Penang" : "Penang Area" },
+            { num: 3, label: lang === "zh" ? "约定时间" : lang === "ms" ? "Masa" : "Schedule", desc: lang === "zh" ? "时段" : lang === "ms" ? "Slot" : "Select time" },
+            { num: 4, label: lang === "zh" ? "账单核对" : lang === "ms" ? "Semakan" : "Review", desc: lang === "zh" ? "确认" : lang === "ms" ? "Sah" : "Final check" },
           ].map((s) => (
             <div key={s.num} className="flex flex-col items-center flex-1 relative">
               <div
@@ -149,9 +205,9 @@ export default function BookingForm({ userId, onSubmit, onCancel }: BookingFormP
               <div>
                 <h3 className="text-base font-semibold text-slate-800 tracking-tight flex items-center gap-2">
                   <span className="p-1.5 bg-blue-100 text-blue-700 rounded-lg"><Wrench size={16} /></span>
-                  What aircon service do you need today?
+                  {t.fieldSelectService}
                 </h3>
-                <p className="text-xs text-slate-500 mt-1">Transparent flat rates for home/shop lots in Penang.</p>
+                <p className="text-xs text-slate-500 mt-1">{t.fieldSelectServiceSub}</p>
               </div>
 
               {/* Service Type Selection Block Grid */}
@@ -175,25 +231,29 @@ export default function BookingForm({ userId, onSubmit, onCancel }: BookingFormP
                           onChange={() => setServiceType(typeKey as ServiceType)}
                           className="mr-1.5 accent-blue-600 h-4 w-4"
                         />
-                        {val.title}
+                        {t[`${typeKey}_title` as keyof typeof t] || val.title}
                       </div>
                       <span className="text-xs font-semibold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full shrink-0">
-                        From RM {val.basePrice}
+                        {lang === "zh" ? "起" : lang === "ms" ? "Dari" : "From"} RM {val.basePrice}
                       </span>
                     </div>
-                    <p className="text-slate-500 text-[11px] font-sans mt-2 grow leading-relaxed">{val.description}</p>
+                    <p className="text-slate-500 text-[11px] font-sans mt-2 grow leading-relaxed">
+                      {t[`${typeKey}_desc` as keyof typeof t] || val.description}
+                    </p>
                   </label>
                 ))}
               </div>
 
               {/* Specific Aircon details */}
               <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-150 space-y-4">
-                <h4 className="text-xs font-bold text-slate-700 tracking-wider uppercase font-sans">Air Conditioning Specifications:</h4>
+                <h4 className="text-xs font-bold text-slate-700 tracking-wider uppercase font-sans">
+                  {lang === "zh" ? "冷气机体硬件指标:" : lang === "ms" ? "Spesifikasi Penghawa Dingin:" : "Air Conditioning Specifications:"}
+                </h4>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Brand Selector */}
                   <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Aircon Brand:</label>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">{t.fieldAcBrand}:</label>
                     <select
                       value={acBrand}
                       onChange={(e) => setAcBrand(e.target.value)}
@@ -209,16 +269,16 @@ export default function BookingForm({ userId, onSubmit, onCancel }: BookingFormP
 
                   {/* Horsepower selects */}
                   <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Horsepower (HP):</label>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">{t.fieldAcHorsepower}:</label>
                     <select
                       value={acHorsepower}
                       onChange={(e) => setAcHorsepower(e.target.value as AcHorsepower)}
                       className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs focus:outline-none focus:border-blue-500 text-slate-800"
                     >
-                      <option value="1.0 HP">1.0 HP (Standard Bedroom)</option>
-                      <option value="1.5 HP">1.5 HP (Large Bedroom / Living Room)</option>
-                      <option value="2.0 HP">2.0 HP (Medium Living Hall)</option>
-                      <option value="2.5 HP or above">2.5 HP or above (Commercial/Large Hall)</option>
+                      <option value="1.0 HP">1.0 HP ({lang === "zh" ? "标准卧室" : lang === "ms" ? "Bilik Tidur Standard" : "Standard Bedroom"})</option>
+                      <option value="1.5 HP">1.5 HP ({lang === "zh" ? "大卧室 / 小客厅" : lang === "ms" ? "Bilik Besar / Ruang Tamu" : "Large Bedroom / Living Room"})</option>
+                      <option value="2.0 HP">2.0 HP ({lang === "zh" ? "中型家用客厅" : lang === "ms" ? "Ruang Tamu Sederhana" : "Medium Living Hall"})</option>
+                      <option value="2.5 HP or above">2.5 HP or above ({lang === "zh" ? "商业写字楼/大礼堂" : lang === "ms" ? "Komersial/Dewan Besar" : "Commercial/Large Hall"})</option>
                     </select>
                   </div>
                 </div>
@@ -226,12 +286,14 @@ export default function BookingForm({ userId, onSubmit, onCancel }: BookingFormP
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* AC Style */}
                   <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Unit Placement / Type:</label>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">
+                      {lang === "zh" ? "冷气机拼装类型:" : lang === "ms" ? "Jenis Pemasangan Unit:" : "Unit Placement / Type:"}
+                    </label>
                     <div className="flex gap-2">
                       {[
-                        { val: "wall_mounted", label: "Wall" },
-                        { val: "cassette", label: "Cassette" },
-                        { val: "ceiling_exposed", label: "Ceiling" },
+                        { val: "wall_mounted", label: lang === "zh" ? "挂壁式" : lang === "ms" ? "Dinding" : "Wall" },
+                        { val: "cassette", label: lang === "zh" ? "天花嵌入" : lang === "ms" ? "Kaset" : "Cassette" },
+                        { val: "ceiling_exposed", label: lang === "zh" ? "吊顶式" : lang === "ms" ? "Siling" : "Ceiling" },
                       ].map((item) => (
                         <button
                           key={item.val}
@@ -252,7 +314,7 @@ export default function BookingForm({ userId, onSubmit, onCancel }: BookingFormP
                   {/* Units Input Count */}
                   <div>
                     <label className="block text-xs font-semibold text-slate-600 mb-1">
-                      Number of Aircon Units: <span className="text-blue-600 font-bold ml-1">{unitsCount} unit(s)</span>
+                      {lang === "zh" ? "待修/清洗台数" : lang === "ms" ? "Bilangan Unit Aircond" : "Number of Aircon Units"}: <span className="text-blue-600 font-bold ml-1">{unitsCount} {lang === "zh" ? "台" : "unit(s)"}</span>
                     </label>
                     <div className="flex items-center gap-3">
                       <button
@@ -290,15 +352,15 @@ export default function BookingForm({ userId, onSubmit, onCancel }: BookingFormP
               <div>
                 <h3 className="text-base font-semibold text-slate-800 tracking-tight flex items-center gap-2">
                   <span className="p-1.5 bg-blue-100 text-blue-700 rounded-lg"><Building size={16} /></span>
-                  Where in Penang should we send our servicing van?
+                  {lang === "zh" ? "我们要派遣服务工程车前往槟城哪里？" : lang === "ms" ? "Di manakah di Penang patut kami hantar van servis?" : "Where in Penang should we send our servicing van?"}
                 </h3>
-                <p className="text-xs text-slate-500 mt-1">We service both Penang Island & Seberang Perai regions.</p>
+                <p className="text-xs text-slate-500 mt-1">{t.fieldClientAreaSub}</p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Full name input */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">Contact Name:</label>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">{t.fieldClientName}:</label>
                   <div className="relative">
                     <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
                       <User size={14} />
@@ -308,7 +370,7 @@ export default function BookingForm({ userId, onSubmit, onCancel }: BookingFormP
                       required
                       value={clientName}
                       onChange={(e) => setClientName(e.target.value)}
-                      placeholder="e.g. Tan Ah Kow"
+                      placeholder={lang === "zh" ? "例如：陈阿九" : lang === "ms" ? "cth., Ahmad Tan" : "e.g. Tan Ah Kow"}
                       className="w-full bg-white border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs focus:outline-none focus:border-blue-500 text-slate-800"
                     />
                   </div>
@@ -316,7 +378,7 @@ export default function BookingForm({ userId, onSubmit, onCancel }: BookingFormP
 
                 {/* HP Input */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">Malaysian Phone Number:</label>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">{t.fieldClientPhone}:</label>
                   <div className="relative">
                     <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
                       <Phone size={14} />
@@ -327,7 +389,7 @@ export default function BookingForm({ userId, onSubmit, onCancel }: BookingFormP
                       value={clientPhone}
                       onChange={(e) => setClientPhone(e.target.value)}
                       placeholder="e.g., +6012-3456789"
-                      className="w-full bg-white border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs focus:outline-none focus:border-blue-500 text-slate-800"
+                      className="w-full bg-white border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs focus:outline-none focus:border-blue-500 text-slate-800 font-mono"
                     />
                   </div>
                 </div>
@@ -336,7 +398,7 @@ export default function BookingForm({ userId, onSubmit, onCancel }: BookingFormP
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Email address */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">Email Address:</label>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">{t.fieldClientEmail}:</label>
                   <div className="relative">
                     <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
                       <Mail size={14} />
@@ -347,14 +409,14 @@ export default function BookingForm({ userId, onSubmit, onCancel }: BookingFormP
                       value={clientEmail}
                       onChange={(e) => setClientEmail(e.target.value)}
                       placeholder="e.g. ahkow@gmail.com"
-                      className="w-full bg-white border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs focus:outline-none focus:border-blue-500 text-slate-800"
+                      className="w-full bg-white border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs focus:outline-none focus:border-blue-500 text-slate-800 font-mono"
                     />
                   </div>
                 </div>
 
                 {/* Local Area Group Selected */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">Penang Region / Area:</label>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">{t.fieldClientArea}:</label>
                   <div className="relative">
                     <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
                       <MapPin size={14} />
@@ -364,14 +426,14 @@ export default function BookingForm({ userId, onSubmit, onCancel }: BookingFormP
                       onChange={(e) => setClientArea(e.target.value as PenangArea)}
                       className="w-full bg-white border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs focus:outline-none focus:border-blue-500 text-slate-800"
                     >
-                      <optgroup label="🏝️ Penang Island Area">
+                      <optgroup label={lang === "zh" ? "🏝️ 槟岛地区 (Island)" : lang === "ms" ? "🏝️ Kawasan Pulau Pinang" : "🏝️ Penang Island Area"}>
                         {PENANG_AREAS.filter((a) => a.zone === "Island").map((a) => (
                           <option key={a.value} value={a.value}>
                             {a.label}
                           </option>
                         ))}
                       </optgroup>
-                      <optgroup label="🌉 Seberang Perai / Mainland Area">
+                      <optgroup label={lang === "zh" ? "🌉 威省 / 大陆地区 (Mainland)" : lang === "ms" ? "🌉 Kawasan Seberang Perai" : "🌉 Seberang Perai / Mainland Area"}>
                         {PENANG_AREAS.filter((a) => a.zone === "Mainland").map((a) => (
                           <option key={a.value} value={a.value}>
                             {a.label}
@@ -385,16 +447,16 @@ export default function BookingForm({ userId, onSubmit, onCancel }: BookingFormP
 
               {/* Detailed Road/Home Address */}
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1.5">Full Servicing Address:</label>
+                <label className="block text-xs font-semibold text-slate-600 mb-1.5">{t.fieldClientAddress}:</label>
                 <textarea
                   required
                   rows={3}
                   value={clientAddress}
                   onChange={(e) => setClientAddress(e.target.value)}
-                  placeholder="e.g., No. 28, Lorong Gurney 3, Gurney Heights Condominium, Block A Unit 12-B"
+                  placeholder={lang === "zh" ? "例如：槟岛葛尼路 28 号，Gurney Heights 豪华公寓，A栋 12-B号" : lang === "ms" ? "cth., No. 28, Lorong Gurney 3, Gurney Heights Condominium, Block A Unit 12-B" : "e.g., No. 28, Lorong Gurney 3, Gurney Heights Condominium, Block A Unit 12-B"}
                   className="w-full bg-white border border-slate-200 rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-blue-500 text-slate-800 resize-none font-sans"
                 />
-                <p className="text-[10px] text-slate-400 mt-1">Please provide the complete street, apartment unit, or shop floor level.</p>
+                <p className="text-[10px] text-slate-400 mt-1">{t.fieldClientAddressSub}</p>
               </div>
             </div>
           )}
@@ -405,15 +467,15 @@ export default function BookingForm({ userId, onSubmit, onCancel }: BookingFormP
               <div>
                 <h3 className="text-base font-semibold text-slate-800 tracking-tight flex items-center gap-2">
                   <span className="p-1.5 bg-blue-100 text-blue-700 rounded-lg"><Calendar size={16} /></span>
-                  When is your preferred aircon service slot?
+                  {lang === "zh" ? "您倾向哪个冷气保养服务时间段？" : lang === "ms" ? "Bila slot masa perkhidmatan aircond pilihan anda?" : "When is your preferred aircon service slot?"}
                 </h3>
-                <p className="text-xs text-slate-500 mt-1">Select dates (Monday - Sunday are available; public holiday bookings include no surcharge!).</p>
+                <p className="text-xs text-slate-500 mt-1">{t.fieldServiceSlotSub}</p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 {/* Calendar Date Picker */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-2">Preferred Appointment Date:</label>
+                  <label className="block text-xs font-semibold text-slate-600 mb-2">{t.fieldServiceDate}:</label>
                   <input
                     type="date"
                     required
@@ -425,19 +487,19 @@ export default function BookingForm({ userId, onSubmit, onCancel }: BookingFormP
                   <div className="mt-3 bg-blue-50/50 rounded-lg border border-blue-100 p-3">
                     <p className="text-[10px] text-blue-800 font-sans leading-relaxed flex items-center gap-1">
                       <Sparkles size={11} className="text-blue-600" />
-                      Tip: Booking on weekdays typically gives 15% better technician availability!
+                      {lang === "zh" ? "小贴士：选择周中时段能享受更好的上门调度以及师傅效率！" : lang === "ms" ? "Tip: Menempah slot hari biasa memberikan ketersediaan teknisi 15% lebih lancar!" : "Tip: Booking on weekdays typically gives 15% better technician availability!"}
                     </p>
                   </div>
                 </div>
 
                 {/* Timeslots choices */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-2">Preferred Time Window:</label>
+                  <label className="block text-xs font-semibold text-slate-600 mb-2">{t.fieldServiceSlot}:</label>
                   <div className="space-y-2.5">
                     {[
-                      { val: "morning", label: "🌅 Morning Slot (09:00 AM - 12:00 PM)", desc: "Cooler temperature, great start." },
-                      { val: "afternoon", label: "☀️ Afternoon Slot (01:00 PM - 04:00 PM)", desc: "Midday maintenance focus." },
-                      { val: "late_afternoon", label: "🌇 Late Afternoon Slot (04:00 PM - 07:00 PM)", desc: "Late checkups, convenient after-work." },
+                      { val: "morning", label: lang === "zh" ? "🌅 上午时段 (09:00 AM - 12:00 PM)" : lang === "ms" ? "🌅 Slot Pagi (09:00 AM - 12:00 PM)" : "🌅 Morning Slot (09:00 AM - 12:00 PM)", desc: lang === "zh" ? "清爽晨间保养出风，完美一天开始。" : lang === "ms" ? "Suhu lebih sejuk, permulaan yang hebat." : "Cooler temperature, great start." },
+                      { val: "afternoon", label: lang === "zh" ? "☀️ 下午时段 (01:00 PM - 04:00 PM)" : lang === "ms" ? "☀️ Slot Tengah Hari (01:00 PM - 04:00 PM)" : "☀️ Afternoon Slot (01:00 PM - 04:00 PM)", desc: lang === "zh" ? "正午彻底化学消毒，强力阻绝闷热。" : lang === "ms" ? "Penyelenggaraan tumpuan tengah hari." : "Midday maintenance focus." },
+                      { val: "late_afternoon", label: lang === "zh" ? "🌇 傍晚时段 (04:00 PM - 07:00 PM)" : lang === "ms" ? "🌇 Slot Petang (04:00 PM - 07:00 PM)" : "🌇 Late Afternoon Slot (04:00 PM - 07:00 PM)", desc: lang === "zh" ? "晚间到府安检，不耽误白天上班时间。" : lang === "ms" ? "Pemeriksaan akhir petang, sesuai selepas waktu kerja." : "Late checkups, convenient after-work." },
                     ].map((slot) => (
                       <label
                         key={slot.val}
@@ -467,13 +529,13 @@ export default function BookingForm({ userId, onSubmit, onCancel }: BookingFormP
               {/* Optional diagnostics note details */}
               <div>
                 <label className="block text-xs font-semibold text-slate-600 mb-1">
-                  Additional Notes / Symptoms <span className="text-slate-400 font-normal">(Optional):</span>
+                  {t.fieldUserNotes} <span className="text-slate-400 font-normal">({lang === "zh" ? "可留空" : lang === "ms" ? "Pilihan" : "Optional"}):</span>
                 </label>
                 <textarea
                   rows={2}
                   value={userNotes}
                   onChange={(e) => setUserNotes(e.target.value)}
-                  placeholder="e.g., Water dripping slowly from bottom right, or remote control occasionally showing error code E5..."
+                  placeholder={lang === "zh" ? "例：右下角慢速滴水、指示灯闪烁、开机有醋样酸味等..." : lang === "ms" ? "cth., Air bocor perlahan dari kanan bawah, atau lampu berkedip seketika..." : "e.g., Water dripping slowly from bottom right, or remote control occasionally showing error code E5..."}
                   className="w-full bg-white border border-slate-200 rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-blue-500 text-slate-800 resize-none font-sans"
                 />
               </div>
@@ -486,48 +548,52 @@ export default function BookingForm({ userId, onSubmit, onCancel }: BookingFormP
               <div>
                 <h3 className="text-base font-semibold text-slate-800 tracking-tight flex items-center gap-2">
                   <span className="p-1.5 bg-green-100 text-green-700 rounded-lg"><CheckSquare size={16} /></span>
-                  Review Your Appointment & Estimate details
+                  {t.reviewTitle}
                 </h3>
-                <p className="text-xs text-slate-500 mt-1">Please double check your contact and details before confirming with Uncle Hock's team.</p>
+                <p className="text-xs text-slate-500 mt-1">{t.reviewSubtitle}</p>
               </div>
 
               {/* Quotation Slip Box */}
               <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
                 <div className="bg-gradient-to-r from-slate-800 to-slate-700 text-white p-3.5 flex justify-between items-center">
-                  <span className="text-xs font-mono tracking-widest uppercase">Service Estimate Summary</span>
+                  <span className="text-xs font-mono tracking-widest uppercase">
+                    {lang === "zh" ? "服务预算账单汇总" : lang === "ms" ? "Sebut Harga Anggaran Servis" : "Service Estimate Summary"}
+                  </span>
                   <span className="text-[10px] font-sans text-slate-300">SuperCool Penang Co.</span>
                 </div>
 
                 <div className="p-4 space-y-4 bg-white text-xs text-slate-800">
                   <div className="grid grid-cols-2 gap-y-2 gap-x-4 border-b border-slate-100 pb-3 font-sans">
-                    <span className="text-slate-500">Service:</span>
-                    <span className="font-semibold text-right text-slate-800">{currentServiceInfo?.title}</span>
-
-                    <span className="text-slate-500">Units / Horsepower:</span>
+                    <span className="text-slate-500">{lang === "zh" ? "服务项目:" : lang === "ms" ? "Servis:" : "Service:"}</span>
                     <span className="font-semibold text-right text-slate-800">
-                      {unitsCount} Unit(s) ({acHorsepower} - {acBrand})
+                      {t[`${serviceType}_title` as keyof typeof t] || currentServiceInfo?.title}
                     </span>
 
-                    <span className="text-slate-500">Scheduled:</span>
+                    <span className="text-slate-500">{lang === "zh" ? "台数与马力规格:" : lang === "ms" ? "Unit / Kuasa Kuda:" : "Units / Horsepower:"}</span>
+                    <span className="font-semibold text-right text-slate-800">
+                      {unitsCount} {lang === "zh" ? "台" : "Unit(s)"} ({acHorsepower} - {acBrand})
+                    </span>
+
+                    <span className="text-slate-500">{lang === "zh" ? "预约预约时点:" : lang === "ms" ? "Tarikh Dijadualkan:" : "Scheduled:"}</span>
                     <span className="font-semibold text-right text-slate-800 text-blue-600">
                       {serviceDate} (
                       {serviceTimeSlot === "morning"
-                        ? "Morning"
+                        ? (lang === "zh" ? "早上" : lang === "ms" ? "Pagi" : "Morning")
                         : serviceTimeSlot === "afternoon"
-                        ? "Afternoon"
-                        : "Late Afternoon"}
+                        ? (lang === "zh" ? "下午" : lang === "ms" ? "Tengah Hari" : "Afternoon")
+                        : (lang === "zh" ? "傍晚" : lang === "ms" ? "Petang" : "Late Afternoon")}
                       )
                     </span>
                   </div>
 
                   <div className="grid grid-cols-2 gap-y-2 gap-x-4 border-b border-slate-100 pb-3 font-sans">
-                    <span className="text-slate-500">Client:</span>
+                    <span className="text-slate-500">{lang === "zh" ? "联系客户:" : lang === "ms" ? "Nama Pelanggan:" : "Client:"}</span>
                     <span className="font-semibold text-right text-slate-800">{clientName}</span>
 
-                    <span className="text-slate-500">Phone:</span>
+                    <span className="text-slate-500">{lang === "zh" ? "联系电话:" : lang === "ms" ? "Telefon:" : "Phone:"}</span>
                     <span className="font-semibold text-right text-slate-800">{clientPhone}</span>
 
-                    <span className="text-slate-500">Address / Location:</span>
+                    <span className="text-slate-500">{lang === "zh" ? "服务地址与区域:" : lang === "ms" ? "Alamat Cawangan:" : "Address / Location:"}</span>
                     <span className="font-semibold text-right text-slate-800 break-words max-w-[200px]">
                       {clientAddress}, <em className="text-teal-600 font-bold not-italic">{clientArea}</em>
                     </span>
@@ -535,7 +601,7 @@ export default function BookingForm({ userId, onSubmit, onCancel }: BookingFormP
 
                   {userNotes && (
                     <div className="bg-slate-50 p-2 rounded-lg text-[11px] font-sans border border-slate-100">
-                      <span className="font-semibold text-slate-500 block mb-0.5">Your Diagnosis Note:</span>
+                      <span className="font-semibold text-slate-500 block mb-0.5">{lang === "zh" ? "您的故障备注:" : lang === "ms" ? "Nota Diagnostik Anda:" : "Your Diagnosis Note:"}</span>
                       <p className="text-slate-600 italic">"{userNotes}"</p>
                     </div>
                   )}
@@ -543,34 +609,34 @@ export default function BookingForm({ userId, onSubmit, onCancel }: BookingFormP
                   {/* Calculations breakdown */}
                   <div className="space-y-1 bg-blue-50/40 p-3 rounded-lg border border-blue-100">
                     <div className="flex justify-between font-sans text-[11px] text-slate-600">
-                      <span>Base Service Fee ({unitsCount} x RM{currentServiceInfo?.basePrice}):</span>
+                      <span>{lang === "zh" ? "基础维修清洗费" : lang === "ms" ? "Yuran Am Perkhidmatan" : "Base Service Fee"} ({unitsCount} x RM{currentServiceInfo?.basePrice}):</span>
                       <span>RM {unitsCount * currentServiceInfo?.basePrice}.00</span>
                     </div>
 
                     {acHorsepower !== "1.0 HP" && (
                       <div className="flex justify-between font-sans text-[11px] text-slate-600">
-                        <span>HP Power Surcharge ({acHorsepower}):</span>
-                        <span className="text-slate-700 font-medium">+ Surcharge Applied</span>
+                        <span>{lang === "zh" ? "大功率马力附加费" : lang === "ms" ? "Surcaj Kuasa Kuda HP" : "HP Power Surcharge"} ({acHorsepower}):</span>
+                        <span className="text-slate-700 font-medium">+ {lang === "zh" ? "已计算折算" : lang === "ms" ? "Surcaj Dikenakan" : "Surcharge Applied"}</span>
                       </div>
                     )}
 
                     {unitsCount >= 2 && (
                       <div className="flex justify-between font-sans text-[11px] text-emerald-600 font-medium">
                         <span className="flex items-center gap-1">
-                          <Percent size={11} /> Bulk Booking Discount:
+                          <Percent size={11} /> {lang === "zh" ? "批量拼单尊享折扣" : lang === "ms" ? "Diskaun Tempahan Pukal" : "Bulk Booking Discount"}:
                         </span>
-                        <span>- Saved RM {Math.round(unitsCount * currentServiceInfo?.basePrice * (unitsCount >= 5 ? 0.15 : unitsCount >= 3 ? 0.1 : 0.05))}.00</span>
+                        <span>- {lang === "zh" ? "节省" : lang === "ms" ? "Saved" : "Saved"} RM {Math.round(unitsCount * currentServiceInfo?.basePrice * (unitsCount >= 5 ? 0.15 : unitsCount >= 3 ? 0.1 : 0.05))}.00</span>
                       </div>
                     )}
 
                     <div className="flex justify-between text-base font-bold text-slate-900 border-t border-slate-150 pt-2 mt-1.5 font-sans">
                       <span className="flex items-center gap-1 text-slate-800">
-                        <DollarSign size={16} className="text-blue-600" /> Guaranteed Estimate:
+                        <DollarSign size={16} className="text-blue-600" /> {lang === "zh" ? "承诺总额评估:" : lang === "ms" ? "Anggaran Bersih Dijamin:" : "Guaranteed Estimate:"}
                       </span>
                       <span className="text-blue-700">RM {estimatedPrice}.00</span>
                     </div>
                     <p className="text-[10px] text-slate-400 text-center font-sans pt-1">
-                      No surprise surcharges. Payment is made locally *after* completing service. Price includes parts testing.
+                      {lang === "zh" ? "绝对无惊喜加价。完工后师傅现场收取。报价含全部检测零件服务费。" : lang === "ms" ? "Tiada kejutan cas tambahan. Bayaran dibuat secara tunai/online selepas selesai kerja." : "No surprise surcharges. Payment is made locally *after* completing service. Price includes parts testing."}
                     </p>
                   </div>
                 </div>
@@ -584,19 +650,19 @@ export default function BookingForm({ userId, onSubmit, onCancel }: BookingFormP
               <button
                 type="button"
                 onClick={onCancel}
-                className="px-4 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors"
+                className="px-4 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors bg-white hover:bg-slate-55"
                 id="booking-cancel-btn"
               >
-                Cancel
+                {lang === "zh" ? "取消" : lang === "ms" ? "Batal" : "Cancel"}
               </button>
             ) : (
               <button
                 type="button"
                 onClick={handlePrevStep}
-                className="flex items-center gap-1 px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 bg-white border border-slate-200 rounded-lg hover:bg-slate-50"
+                className="flex items-center gap-1 px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 animate-fadeIn"
                 id="booking-back-btn"
               >
-                <ChevronLeft size={14} /> Back
+                <ChevronLeft size={14} /> {lang === "zh" ? "上一步" : lang === "ms" ? "Kembali" : "Back"}
               </button>
             )}
 
@@ -608,20 +674,111 @@ export default function BookingForm({ userId, onSubmit, onCancel }: BookingFormP
                 className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg text-xs font-semibold transition-all shadow-md active:scale-95 disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
                 id="booking-next-btn"
               >
-                Next Step <ChevronRight size={14} />
+                {lang === "zh" ? "下一步" : lang === "ms" ? "Langkah Seterusnya" : "Next Step"} <ChevronRight size={14} />
               </button>
             ) : (
-              <button
-                type="submit"
-                className="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-lg text-xs font-bold transition-all shadow-md active:scale-95"
-                id="booking-confirm-btn"
-              >
-                ✓ Secure Booking Now
-              </button>
+              <div className="flex flex-col sm:flex-row shadow-sm rounded-lg overflow-hidden border border-slate-150 gap-2 sm:gap-2 sm:border-none sm:shadow-none sm:bg-transparent">
+                <a
+                  href={getWhatsAppUrl()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => {
+                    const newBooking = {
+                      serviceType,
+                      unitsCount,
+                      acType,
+                      acBrand,
+                      acHorsepower,
+                      clientName,
+                      clientPhone,
+                      clientEmail,
+                      clientArea,
+                      clientAddress,
+                      serviceDate,
+                      serviceTimeSlot,
+                      userNotes,
+                      estimatePrice: estimatedPrice,
+                    };
+                    onSubmit(newBooking);
+                  }}
+                  className="flex items-center justify-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-lg text-xs font-bold transition-all shadow-md active:scale-95 text-center"
+                  id="booking-whatsapp-direct-btn"
+                >
+                  <MessageSquare size={14} /> {t.sendWhatsAppDirect}
+                </a>
+                <button
+                  type="submit"
+                  className="flex items-center justify-center gap-1 bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-lg text-xs font-bold transition-all shadow-md active:scale-95 animate-fadeIn"
+                  id="booking-confirm-btn"
+                >
+                  ✓ {t.secureBookingNow}
+                </button>
+              </div>
             )}
           </div>
         </form>
       </div>
+
+      {/* SUCCESS MODAL / WHATSAPP DISPATCH HANDOFF */}
+      {isSuccessModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn" id="whatsapp-handshake-modal">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-100 text-center space-y-6 animate-scaleIn">
+            <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto text-3xl animate-bounce">
+              💬
+            </div>
+            
+            <div className="space-y-2">
+              <h3 className="font-extrabold text-slate-900 text-lg sm:text-xl tracking-tight">
+                {lang === "zh" ? "🎉 预约申请已存入系统！" : lang === "ms" ? "🎉 Tempahan Disimpan dalam Sistem!" : "🎉 Appointment Saved Centrally!"}
+              </h3>
+              <p className="text-xs text-slate-500 leading-relaxed font-sans">
+                {lang === "zh" 
+                  ? "您的订单评估已安全存入超级冷气后台。根据巴都丁宜到北海的调度规定，您需要点击联络 Mike 极速发送工单明细排期。"
+                  : lang === "ms" 
+                  ? "Sebut harga anda telah selamat didaftarkan. Untuk pengesahan pantas, sila hantar butiran ini terus kepada talian rasmi WhatsApp Mike."
+                  : "Your pricing estimate has been logged in our system. To finalize, click below to trigger high-priority dispatch review with Mike's Penang office."}
+              </p>
+            </div>
+
+            <div className="p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100 text-left space-y-1.5 text-xs font-sans">
+              <span className="font-bold text-emerald-950 block">📞 {lang === "zh" ? "马来西亚 WhatsApp 运营号码:" : lang === "ms" ? "Nombor Telefon Agihan:" : "WhatsApp Official Line:"}</span>
+              <span className="font-bold font-mono text-base text-emerald-800 tracking-wider block">+60175162938</span>
+              <p className="text-[10px] text-slate-500 leading-normal">
+                {lang === "zh" 
+                  ? "微信/WhatsApp 客户服务时间：周一至周六 9:00 AM - 7:00 PM。"
+                  : lang === "ms" 
+                  ? "Waktu operasi perkhidmatan WhatsApp: Isnin - Sabtu 9:00 AM - 7:00 PM."
+                  : "Georgetown dispatcher operational hours: Mon - Sat 9:00 AM - 7:00 PM."}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <a
+                href={getWhatsAppUrl()}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl text-xs shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2"
+                id="modal-whatsapp-link"
+              >
+                <MessageSquare size={16} />
+                {lang === "zh" ? "连线官方专线确认 (60175162938)" : lang === "ms" ? "Hantar WhatsApp Selesai (60175162938)" : "Forward details to +60175162938"}
+              </a>
+              
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSuccessModalOpen(false);
+                  onCancel(); // Closes the booking modal form and displays bookings panel
+                }}
+                className="w-full py-3 text-slate-500 hover:text-slate-800 text-xs font-semibold hover:bg-slate-50 rounded-xl transition-all"
+                id="modal-dismiss-btn"
+              >
+                {lang === "zh" ? "完成并查看我的全部工单" : lang === "ms" ? "Selesai & Lihat Rekod Tempahan" : "Finish & View My Bookings"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

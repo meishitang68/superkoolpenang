@@ -1,6 +1,6 @@
 {
   "name": "Penang Aircon Services Booking",
   "description": "A localized full-stack appointment booking and AI diagnostics platform for Penang air conditioning maintenance.",
-  "requestFramePermissions": [],
+  "requestFramePermissions": ["camera"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

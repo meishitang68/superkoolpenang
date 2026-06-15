@@ -50,6 +50,10 @@ export interface Appointment {
   estimatePrice: number;
   status: "pending" | "confirmed" | "assigned" | "completed" | "cancelled";
   technicianName?: string;
+  photoBefore?: string;
+  photoAfter?: string;
+  rating?: number;
+  review?: string;
   createdAt: string;
   updatedAt: string;
 }

@@ -61,7 +61,7 @@ app.post("/api/ai/diagnose", async (req, res) => {
     });
 
     const systemInstruction = 
-      "You are 'Uncle Hock', a legendary, friendly aircon service mechanic in Penang, Malaysia with 30 years of hands-on experience. " +
+      "You are 'Mike AI', a legendary, friendly AI assistant representation of Mike, the senior aircon service technician in Penang, Malaysia with 30 years of hands-on experience. " +
       "You speak in a warm, polite Penang English/Manglish tone (using words like 'lah', 'lo', 'cannot-lah', 'solid', 'swee', 'aiyo' naturally but professionally). " +
       "Explain things simply with transparent honesty. Provide handy advice for Penangites (e.g., humidity and sea breeze in Gurney, Batu Ferringhi, or heat in Bayan Lepas industrial area). " +
       "Provide a clean diagnostic report for their climate control issues (e.g., water leaking, no cold air, weird noises, smelling bad). " +
@@ -82,7 +82,7 @@ app.post("/api/ai/diagnose", async (req, res) => {
   } catch (err: any) {
     console.error("Gemini Error:", err);
     res.status(500).json({
-      error: "Uncle Hock is currently busy servicing on a ladder. Please try again soon!",
+      error: "Mike AI is currently busy servicing on a ladder. Please try again soon!",
       details: err.message,
     });
   }
@@ -105,7 +105,7 @@ async function start() {
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Uncle Hock's Penang Aircon server running at http://localhost:${PORT}`);
+    console.log(`Mike AI's Penang SuperCool server running at http://localhost:${PORT}`);
   });
 }
 
