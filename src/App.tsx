@@ -721,13 +721,21 @@ export default function App() {
                     : "Understand how standard on-wall canvas bag washing differs from a total dismantle overhaul."}
                 </p>
               </div>
-              <div className="relative overflow-hidden rounded-xl border border-slate-200 shadow-sm bg-white">
-                <img
-                  src="/image/chemical_service_comparison.jpg"
-                  alt="Aircon Chemical Service Types: A Visual Comparison (Canvas Chemical Service vs Full Chemical Overhaul)"
-                  className="w-full h-auto object-cover select-none"
-                  referrerPolicy="no-referrer"
-                />
+              <div className="relative overflow-x-auto rounded-xl border border-slate-200 shadow-sm bg-white">
+                <div className="min-w-[768px] md:min-w-full">
+                  <img
+                    src="/image/chemical_service_comparison.jpg"
+                    alt="Aircon Chemical Service Types: A Visual Comparison (Canvas Chemical Service vs Full Chemical Overhaul)"
+                    className="w-full h-auto select-none block"
+                    referrerPolicy="no-referrer"
+                  />
+                </div>
+              </div>
+              <div className="text-center md:hidden mt-2">
+                <p className="text-[11px] text-slate-400 font-sans flex items-center justify-center gap-1">
+                  <span>↔️</span>
+                  {lang === "zh" ? "提示：左右滑动可查看完整清晰对比" : lang === "ms" ? "Tip: Leret ke kiri/kanan untuk perbandingan penuh" : "Tip: Swipe left/right to view full comparison"}
+                </p>
               </div>
             </div>
 
